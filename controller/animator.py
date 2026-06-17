@@ -11,10 +11,10 @@ from typing import Optional, Dict, Any
 
 
 class TreeLayout:
-    """
-    Вспомогательный класс для расчета (x, y) координат узлов.
-    Использует In-Order обход: X зависит от порядка узла при симметричном обходе,
-    Y зависит от глубины узла. Это гарантирует, что узлы никогда не наложатся друг на друга.
+    """Вычисление (x, y) координат узлов для визуального размещения.
+
+    Использует симметричный обход (in-order): абсцисса определяется порядком узла,
+    ордината — глубиной. Результат обеспечивает компактное распределение узлов.
     """
 
     H_SPACING = 50  # Горизонтальное расстояние
@@ -32,7 +32,7 @@ class TreeLayout:
 
             traverse(node.left, depth + 1)
 
-            # ВОТ ЗДЕСЬ КЛЮЧ К РЕБРАМ: parent_id
+            # parent_id — идентификатор родителя, используется при отрисовке ребер
             layout[node.id] = {
                 "x": index * TreeLayout.H_SPACING,
                 "y": depth * TreeLayout.V_SPACING,
@@ -53,10 +53,7 @@ class TreeLayout:
 
 
 class Animator(QObject):
-    """
-    Координатор анимаций. Слушает математическую модель дерева,
-    записывает шаги и плавно воспроизводит их на графической сцене.
-    """
+    """Координатор анимаций: накапливает события модели и воспроизводит их на сцене."""
 
     # Сигнал, который отправляется в главное окно, когда все анимации завершены
     # (чтобы разблокировать кнопки UI)
@@ -64,9 +61,9 @@ class Animator(QObject):
 
     def __init__(self, scene: Any, tree: Any, speed_ms: int = 500):
         super().__init__()
-        self.scene = scene  # Ссылка на QGraphicsScene (напишем позже)
+        self.scene = scene  # Ссылка на QGraphicsScene
         self.tree = tree  # Экземпляр дерева (BST, AVL, RB, Splay)
-        self.speed_ms = speed_ms  # Длительность одной анимации
+        self.speed_ms = speed_ms  # Длительность анимаций в миллисекундах
 
         self.queue: list[dict] = []  # Очередь кадров
         self.is_playing = False
@@ -75,14 +72,12 @@ class Animator(QObject):
         self.tree.add_observer(self.on_tree_event)
 
     def on_tree_event(self, event_type: EventType, node: Optional[Node], **kwargs):
-        """
-        Ловит сигнал от логики дерева. Выполняется мгновенно!
-        """
+        """Обрабатывает событие от модели и сохраняет снимок состояния сцены."""
         # Делаем снимок текущего расположения ВСЕХ узлов
         layout_snapshot = TreeLayout.calculate(self.tree.root)
 
-        # Сохраняем примитивы (значения), а не ссылки на объекты,
-        # так как объект Node может измениться в следующую микросекунду
+        # Сохраняем примитивные значения, а не ссылки на объекты,
+        # так как объект `Node` может быть изменён позже
         node_info = None
         if node:
             node_info = {
@@ -100,13 +95,13 @@ class Animator(QObject):
         self.queue.append(frame)
 
     def play(self):
-        """Запускает проигрывание очереди, если оно еще не идет."""
+        """Запускает воспроизведение очереди кадров, если оно не запущено."""
         if not self.is_playing and self.queue:
             self.is_playing = True
             self._play_next_frame()
 
     def _play_next_frame(self):
-        """Берет следующий кадр из очереди и анимирует его."""
+        """Выполняет очередной кадр: применяет изменения и запускает анимации."""
         if not self.queue:
             self.is_playing = False
             self.sequence_finished.emit()  # Сообщаем GUI, что можно принимать новые команды
@@ -119,11 +114,11 @@ class Animator(QObject):
 
         # 1. Обработка логики кадра
         if event_type == EventType.INSERT:
-            # Говорим сцене создать новый кружок
+            # Добавить визуальный узел на сцену
             self.scene.add_node_item(node_info)
 
         elif event_type == EventType.DELETE:
-            # Говорим сцене удалить кружок
+            # Удалить визуальный узел со сцены
             self.scene.remove_node_item(node_info["id"])
 
         elif event_type == EventType.RECOLOR:
@@ -140,8 +135,7 @@ class Animator(QObject):
             if node_info:
                 self.scene.highlight_node(node_info["id"], "RED")
 
-        # 2. Анимация перемещения (самая важная часть)
-        # Создаем группу, чтобы все узлы двигались одновременно (параллельно)
+        # 2. Анимация перемещения — группируем анимации для параллельного исполнения
         self.anim_group = QParallelAnimationGroup()
         animations_added = False
 

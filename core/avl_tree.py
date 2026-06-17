@@ -4,9 +4,9 @@ from core.bst import BST
 
 
 class AVLTree(BST):
-    """
-    Самобалансирующееся AVL-дерево.
-    Гарантирует высоту O(log N) за счет малых и больших вращений.
+    """Реализация самобалансирующегося AVL-дерева.
+
+    Обеспечивает асимптотическую высоту O(log N) через одно- и двухкратные ротации.
     """
 
     # --- Вспомогательные методы для работы с высотой ---
@@ -43,11 +43,11 @@ class AVLTree(BST):
         x = y.left
         T2 = x.right
 
-        # Перестраиваем связи
+        # Перепривязываем указатели
         x.right = y
         y.left = T2
 
-        # Обновляем родителей
+        # Обновляем ссылки на родителя
         x.parent = y.parent
         if y.parent is None:
             self.root = x
@@ -60,11 +60,11 @@ class AVLTree(BST):
         if T2:
             T2.parent = y
 
-        # Обновляем высоты (важен порядок: сначала y (он теперь ниже), затем x)
+        # Обновляем высоты в нижнем-верхнем порядке
         self._update_height(y)
         self._update_height(x)
 
-        # Сообщаем GUI, что произошел поворот!
+        # Оповещение о ротации
         self.emit(EventType.ROTATE, y, direction="RIGHT")
 
         return x
@@ -77,11 +77,11 @@ class AVLTree(BST):
         y = x.right
         T2 = y.left
 
-        # Перестраиваем связи
+        # Перепривязываем указатели
         y.left = x
         x.right = T2
 
-        # Обновляем родителей
+        # Обновляем ссылки на родителя
         y.parent = x.parent
         if x.parent is None:
             self.root = y
@@ -94,20 +94,17 @@ class AVLTree(BST):
         if T2:
             T2.parent = x
 
-        # Обновляем высоты (сначала x, затем y)
+        # Обновляем высоты снизу вверх
         self._update_height(x)
         self._update_height(y)
 
-        # Сообщаем GUI
+        # Оповещение о ротации
         self.emit(EventType.ROTATE, x, direction="LEFT")
 
         return y
 
     def _balance_node(self, node: Node) -> Node:
-        """
-        Проверяет баланс узла и выполняет необходимые повороты.
-        Возвращает новый корень этого поддерева.
-        """
+        """Проверяет баланс и выполняет необходимые ротации. Возвращает новый корень поддерева."""
         self._update_height(node)
         balance = self._get_balance(node)
 
@@ -133,10 +130,8 @@ class AVLTree(BST):
     # --- Публичные методы ---
 
     def insert(self, key: int) -> Optional[Node]:
-        """
-        Вставка элемента с последующей балансировкой снизу вверх.
-        """
-        # Используем логику обычного BST для физической вставки
+        """Вставка с последующей балансировкой по пути к корню."""
+        # Используем стандартную вставку BST для создания физического узла
         new_node = super().insert(key)
         if not new_node:
             return None  # Игнорируем дубликаты
@@ -151,9 +146,7 @@ class AVLTree(BST):
         return new_node
 
     def delete(self, key: int) -> bool:
-        """
-        Удаление элемента с последующей балансировкой снизу вверх.
-        """
+        """Удаление с последующей балансировкой по пути к корню."""
         node_to_delete = self.search(key)
         if not node_to_delete:
             return False
@@ -186,7 +179,7 @@ class AVLTree(BST):
         node_to_delete.parent = node_to_delete.left = node_to_delete.right = None
         self.emit(EventType.DELETE, node_to_delete)
 
-        # Балансируем дерево от места удаления до корня
+        # Балансируем по пути от точки удаления к корню
         curr = balance_start_node
         while curr:
             curr = self._balance_node(curr).parent

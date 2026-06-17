@@ -5,22 +5,19 @@ from typing import Optional, Callable, Any, Generator
 
 
 class EventType(Enum):
-    """Типы событий, которые дерево отправляет графическому интерфейсу."""
+    """Типы событий, генерируемых моделью для UI/визуализации."""
 
-    INSERT = "INSERT"  # Узел добавлен
-    DELETE = "DELETE"  # Узел удален
-    ROTATE = "ROTATE"  # Произошел поворот поддерева (балансировка)
-    RECOLOR = "RECOLOR"  # Узел изменил цвет (для Красно-черного дерева)
-    TRAVERSE = "TRAVERSE"  # Шаг алгоритма (для подсветки пути поиска/обхода)
-    FOUND = "FOUND"  # Элемент успешно найден
-    NOT_FOUND = "NOT_FOUND"  # Элемент не найден
+    INSERT = "INSERT"
+    DELETE = "DELETE"
+    ROTATE = "ROTATE"
+    RECOLOR = "RECOLOR"
+    TRAVERSE = "TRAVERSE"
+    FOUND = "FOUND"
+    NOT_FOUND = "NOT_FOUND"
 
 
 class Node:
-    """
-    Базовый класс узла дерева.
-    Не содержит логики, только хранит данные и связи.
-    """
+    """Базовая структура узла: ключ, ссылки и вспомогательные метаданные."""
 
     def __init__(self, key: int):
         self.key: int = key
@@ -31,8 +28,8 @@ class Node:
         self.right: Optional[Node] = None
         self.parent: Optional[Node] = None
 
-        # Словарь для хранения специфичных данных разных деревьев
-        # Например: meta['height'] для AVL, meta['color'] для RB-дерева
+        # Словарь для хранения данных, специфичных для конкретной реализации дерева
+        # (например, высота для AVL, цвет для RB).
         self.meta: dict[str, Any] = {}
 
     def __repr__(self) -> str:
@@ -40,10 +37,7 @@ class Node:
 
 
 class BaseTree:
-    """
-    Абстрактный базовый класс для всех деревьев.
-    Реализует паттерн 'Наблюдатель' (Observer) и общие алгоритмы навигации.
-    """
+    """Базовый класс для деревьев: общие алгоритмы навигации и механизм событий (Observer)."""
 
     def __init__(self):
         self.root: Optional[Node] = None
@@ -52,21 +46,18 @@ class BaseTree:
     # --- Механизм событий (Паттерн Observer) ---
 
     def add_observer(self, callback: Callable) -> None:
-        """Подписывает функцию на события дерева (вызывается из GUI)."""
+        """Добавить подписчика на события модели."""
         self._observers.append(callback)
 
     def emit(self, event_type: EventType, node: Optional[Node], **kwargs) -> None:
-        """
-        Уведомляет всех подписчиков об изменении в дереве.
-        **kwargs используется для передачи дополнительных данных (например, direction="LEFT" при повороте).
-        """
+        """Оповестить всех подписчиков о событии модели. Доп. параметры через kwargs."""
         for observer in self._observers:
             observer(event_type, node, **kwargs)
 
     # --- Вспомогательные методы поиска ---
 
     def get_min(self, node: Node) -> Node:
-        """Находит узел с минимальным значением в заданном поддереве."""
+        """Возвращает минимальный узел в поддереве (левый край)."""
         current = node
         while current.left:
             self.emit(EventType.TRAVERSE, current)
@@ -75,7 +66,7 @@ class BaseTree:
         return current
 
     def get_max(self, node: Node) -> Node:
-        """Находит узел с максимальным значением в заданном поддереве."""
+        """Возвращает максимальный узел в поддереве (правый край)."""
         current = node
         while current.right:
             self.emit(EventType.TRAVERSE, current)

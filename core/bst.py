@@ -3,13 +3,10 @@ from core.base_tree import BaseTree, Node, EventType
 
 
 class BST(BaseTree):
-    """
-    Классическое бинарное дерево поиска (Binary Search Tree).
-    Без автоматической балансировки.
-    """
+    """Классический бинарный поиск без самобалансировки."""
 
     def insert(self, key: int) -> Optional[Node]:
-        """Вставка нового элемента в дерево."""
+        """Вставить ключ в дерево. Возвращает узел или None при дубликате."""
         if not self.root:
             self.root = Node(key)
             self.emit(EventType.INSERT, self.root)
@@ -77,7 +74,7 @@ class BST(BaseTree):
         Удаление элемента с физическим перестроением связей (Pointer Rewiring).
         Возвращает True, если элемент был удален, и False, если не найден.
         """
-        # Сначала ищем узел (search сам сгенерирует события TRAVERSE для визуализации)
+        # Сначала ищем узел; `search` генерирует TRAVERSE-события для визуализации
         node_to_delete = self.search(key)
         if not node_to_delete:
             return False
@@ -92,8 +89,8 @@ class BST(BaseTree):
 
         # Случай 3: Есть оба потомка
         else:
-            # Ищем преемника (минимальный элемент в правом поддереве)
-            # get_min также сгенерирует TRAVERSE, так что пользователь увидит этот поиск
+            # Находим преемника — минимальный элемент в правом поддереве.
+            # `get_min` генерирует TRAVERSE при движении по левым ветвям.
             successor = self.get_min(node_to_delete.right)
 
             # Если преемник не является прямым потомком удаляемого узла
@@ -107,7 +104,7 @@ class BST(BaseTree):
             successor.left = node_to_delete.left
             successor.left.parent = successor
 
-        # Очищаем связи удаленного узла для сборщика мусора и сообщаем GUI
+        # Очищаем ссылки у удалённого узла и оповещаем подписчиков
         node_to_delete.parent = node_to_delete.left = node_to_delete.right = None
         self.emit(EventType.DELETE, node_to_delete)
 
