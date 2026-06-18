@@ -28,13 +28,15 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Интерактивный Визуализатор Деревьев Поиска")
-        self.resize(1200, 800)
 
         self.tree = None
         self.animator = None
 
         self.init_ui()
         self.change_tree_type()
+
+        # self.setMinimumSize(800, 600)
+        self.showMaximized()
 
     def init_ui(self):
         """Инициализирует элементы пользовательского интерфейса и их расположение."""
