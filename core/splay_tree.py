@@ -132,8 +132,6 @@ class SplayTree(BST):
         if not node_to_delete:
             return False
 
-        self.emit(EventType.DELETE, node_to_delete)
-
         left_tree = node_to_delete.left
         right_tree = node_to_delete.right
 
@@ -152,5 +150,7 @@ class SplayTree(BST):
             max_node.right = right_tree
             if right_tree:
                 right_tree.parent = max_node
+
+        self.emit(EventType.DELETE, node_to_delete)
 
         return True
