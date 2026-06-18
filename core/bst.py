@@ -39,14 +39,17 @@ class BST(BaseTree):
     def search(self, key: int) -> Optional[Node]:
         """Ищет узел по ключу и генерирует события поиска."""
         current = self.root
+        last_node = None
+
         while current:
             self.emit(EventType.TRAVERSE, current)
+            last_node = current
             if key == current.key:
                 self.emit(EventType.FOUND, current)
                 return current
             current = current.left if key < current.key else current.right
 
-        self.emit(EventType.NOT_FOUND, None)
+        self.emit(EventType.NOT_FOUND, last_node)
         return None
 
     def _transplant(self, u: Node, v: Optional[Node]) -> None:

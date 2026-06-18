@@ -71,17 +71,12 @@ class TreeScene(QGraphicsScene):
             return
 
         if color == "YELLOW":
-            item.set_highlight("yellow", "orange")
+            item.set_highlight("yellow", "orange", duration_ms=400)
         elif color == "GREEN":
-            item.set_highlight("lightgreen", "darkgreen")
+            item.set_highlight("lightgreen", "darkgreen", duration_ms=1500)
         elif color == "RED":
-            item.set_highlight("lightcoral", "darkred")
+            item.set_highlight("lightcoral", "darkred", duration_ms=1500)
 
-        def restore_color():
-            if item in self.nodes.values():
-                item.remove_highlight()
-
-        QTimer.singleShot(400, restore_color)
 
     def _add_edge_if_not_exists(self, parent_id: str, child_id: str):
         """Создает ребро между двумя узлами, если оно еще не существует."""

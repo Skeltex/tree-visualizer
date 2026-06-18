@@ -103,7 +103,7 @@ class SplayTree(BST):
             else:
                 current = current.right
 
-        self.emit(EventType.NOT_FOUND, None)
+        self.emit(EventType.NOT_FOUND, last_accessed)
         if last_accessed:
             self._splay(last_accessed)
 

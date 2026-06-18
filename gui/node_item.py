@@ -1,7 +1,7 @@
 """Графическое отображение узла в QGraphicsScene."""
 
 from PySide6.QtWidgets import QGraphicsObject, QGraphicsItem
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 
 
@@ -25,6 +25,10 @@ class NodeItem(QGraphicsObject):
 
         self.edges = []
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+
+        self._highlight_timer = QTimer()
+        self._highlight_timer.setSingleShot(True)
+        self._highlight_timer.timeout.connect(self.remove_highlight)
 
     def boundingRect(self) -> QRectF:
         """Возвращает прямоугольник, ограничивающий узел для отрисовки."""
@@ -59,13 +63,20 @@ class NodeItem(QGraphicsObject):
         self.update()
 
     def set_highlight(
-        self, bg_color: str, border_color: str, text_color: str = "black"
+        self,
+        bg_color: str,
+        border_color: str,
+        text_color: str = "black",
+        duration_ms: int = 400,
     ):
         """Временно меняет цвета узла для визуального выделения."""
         self.current_bg = QColor(bg_color)
         self.current_border = QColor(border_color)
         self.current_text = QColor(text_color)
         self.update()
+
+        if duration_ms > 0:
+            self._highlight_timer.start(duration_ms)
 
     def remove_highlight(self):
         """Восстанавливает базовый цвет узла, отменяя выделение."""
