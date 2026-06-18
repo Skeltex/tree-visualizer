@@ -1,33 +1,29 @@
+"""Реализация красно-чёрного дерева с визуализацией событий."""
+
 from typing import Optional
 from core.base_tree import Node, EventType
 from core.bst import BST
 
 
 class RBTree(BST):
-    """
-    Красно-чёрное дерево.
-    Обеспечивает балансировку через перекрашивание узлов и ротации.
-    """
-
-    # --- Вспомогательные методы работы с цветом ---
+    """Красно-чёрное дерево с ротациями и восстановлением цветовых свойств."""
 
     def _get_color(self, node: Optional[Node]) -> str:
-        """Пустые узлы (None) концептуально считаются ЧЕРНЫМИ."""
+        """Пустые узлы (None) считаются черными по определению RB-дерева."""
         if not node:
             return "BLACK"
         return node.meta.get("color", "BLACK")
 
     def _set_color(self, node: Optional[Node], color: str) -> None:
-        """Устанавливает цвет и уведомляет GUI (если узел не фантомный)."""
+        """Обновляет цвет узла и оповещает UI, если это реальный узел."""
         if node and not node.meta.get("fake", False):
             node.meta["color"] = color
             self.emit(EventType.RECOLOR, node, color=color)
         elif node and node.meta.get("fake", False):
-            node.meta["color"] = color  # Фантомные узлы красим в тишине
-
-    # --- Ротации (без учета высоты, в отличие от AVL) ---
+            node.meta["color"] = color
 
     def _rotate_left(self, x: Node) -> None:
+        """Левый поворот вокруг узла x."""
         y = x.right
         x.right = y.left
         if y.left:
@@ -46,6 +42,7 @@ class RBTree(BST):
         self.emit(EventType.ROTATE, x, direction="LEFT")
 
     def _rotate_right(self, y: Node) -> None:
+        """Правый поворот вокруг узла y."""
         x = y.left
         y.left = x.right
         if x.right:
@@ -63,43 +60,36 @@ class RBTree(BST):
         y.parent = x
         self.emit(EventType.ROTATE, y, direction="RIGHT")
 
-    # --- Вставка и её балансировка ---
+    # Вставка и её балансировка
 
     def insert(self, key: int) -> Optional[Node]:
-        # Физически вставляем как в обычном BST
+        """Вставляет ключ, помечает его красным и запускает восстановление свойств."""
         new_node = super().insert(key)
         if not new_node:
-            return None  # Игнорируем дубликаты
-
-        # Новый узел всегда красный
+            return None
         self._set_color(new_node, "RED")
         self._insert_fixup(new_node)
         return new_node
 
     def _insert_fixup(self, z: Node) -> None:
-        """Восстановление свойств после вставки."""
+        """Восстанавливает свойства RB-дерева после вставки красного узла."""
         while z.parent and self._get_color(z.parent) == "RED":
-            # Parent is left child
             if z.parent == z.parent.parent.left:
-                y = z.parent.parent.right  # Uncle
+                y = z.parent.parent.right
                 if self._get_color(y) == "RED":
-                    # Случай 1: Дядя красный. Перекрашиваем родителя, дядю и деда.
                     self._set_color(z.parent, "BLACK")
                     self._set_color(y, "BLACK")
                     self._set_color(z.parent.parent, "RED")
                     z = z.parent.parent
                 else:
                     if z == z.parent.right:
-                        # Случай 2: Дядя черный, узел - правый потомок (зигзаг)
                         z = z.parent
                         self._rotate_left(z)
-                    # Случай 3: Дядя черный, узел - левый потомок
                     self._set_color(z.parent, "BLACK")
                     self._set_color(z.parent.parent, "RED")
                     self._rotate_right(z.parent.parent)
-            # Parent is right child (симметрично)
             else:
-                y = z.parent.parent.left  # Uncle
+                y = z.parent.parent.left
                 if self._get_color(y) == "RED":
                     self._set_color(z.parent, "BLACK")
                     self._set_color(y, "BLACK")
@@ -115,17 +105,16 @@ class RBTree(BST):
 
         self._set_color(self.root, "BLACK")
 
-    # --- Удаление и его балансировка ---
+    # Удаление и его балансировка
 
     def delete(self, key: int) -> bool:
+        """Удаляет узел и восстанавливает цветовые свойства RB-дерева."""
         z = self.search(key)
         if not z:
             return False
 
         y = z
         y_original_color = self._get_color(y)
-
-        # x_fake - фантомный узел, если x окажется None
         x_fake = None
 
         if z.left is None:
@@ -142,7 +131,6 @@ class RBTree(BST):
             y = self.get_min(z.right)
             y_original_color = self._get_color(y)
             x = y.right
-
             if y.parent == z:
                 if x is None:
                     x = x_fake = self._create_fake_node(y, is_left=False)
@@ -152,11 +140,10 @@ class RBTree(BST):
                 self._transplant(y, x)
                 y.right = z.right
                 y.right.parent = y
-
             self._transplant(z, y)
             y.left = z.left
             y.left.parent = y
-            self._set_color(y, self._get_color(z))  # Наследник забирает цвет удаленного
+            self._set_color(y, self._get_color(z))
 
         z.parent = z.left = z.right = None
         self.emit(EventType.DELETE, z)
@@ -164,7 +151,6 @@ class RBTree(BST):
         if y_original_color == "BLACK":
             self._delete_fixup(x)
 
-        # Удаляем фантомный узел, если он был создан
         if x_fake:
             self._remove_fake_node(x_fake)
 
@@ -196,7 +182,7 @@ class RBTree(BST):
         """Восстановление свойств после удаления черного узла (Двойной Черный)."""
         while x != self.root and self._get_color(x) == "BLACK":
             if x == x.parent.left:
-                w = x.parent.right  # Sibling (брат)
+                w = x.parent.right
                 if self._get_color(w) == "RED":
                     self._set_color(w, "BLACK")
                     self._set_color(x.parent, "RED")
@@ -220,8 +206,8 @@ class RBTree(BST):
                     self._set_color(x.parent, "BLACK")
                     self._set_color(w.right, "BLACK")
                     self._rotate_left(x.parent)
-                    x = self.root  # Завершаем цикл
-            else:  # Симметричный случай
+                    x = self.root
+            else:
                 w = x.parent.left
                 if self._get_color(w) == "RED":
                     self._set_color(w, "BLACK")

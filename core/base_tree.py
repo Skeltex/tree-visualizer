@@ -1,3 +1,5 @@
+"""Общие структуры и алгоритмы для деревьев и событийной визуализации."""
+
 from __future__ import annotations
 import uuid
 from enum import Enum
@@ -21,15 +23,10 @@ class Node:
 
     def __init__(self, key: int):
         self.key: int = key
-        # Уникальный ID позволяет графической сцене не терять узел после балансировок
         self.id: str = str(uuid.uuid4())
-
         self.left: Optional[Node] = None
         self.right: Optional[Node] = None
         self.parent: Optional[Node] = None
-
-        # Словарь для хранения данных, специфичных для конкретной реализации дерева
-        # (например, высота для AVL, цвет для RB).
         self.meta: dict[str, Any] = {}
 
     def __repr__(self) -> str:
@@ -43,8 +40,6 @@ class BaseTree:
         self.root: Optional[Node] = None
         self._observers: list[Callable] = []
 
-    # --- Механизм событий (Паттерн Observer) ---
-
     def add_observer(self, callback: Callable) -> None:
         """Добавить подписчика на события модели."""
         self._observers.append(callback)
@@ -53,8 +48,6 @@ class BaseTree:
         """Оповестить всех подписчиков о событии модели. Доп. параметры через kwargs."""
         for observer in self._observers:
             observer(event_type, node, **kwargs)
-
-    # --- Вспомогательные методы поиска ---
 
     def get_min(self, node: Node) -> Node:
         """Возвращает минимальный узел в поддереве (левый край)."""
@@ -74,15 +67,8 @@ class BaseTree:
         self.emit(EventType.TRAVERSE, current)
         return current
 
-    # --- Навигация ---
-
     def get_next(self, node: Node) -> Optional[Node]:
-        """
-        Находит следующий по величине узел (Successor).
-        Правило:
-        1. Если есть правое поддерево - это минимум в правом поддереве.
-        2. Иначе - идем вверх, пока не станем левым потомком своего родителя.
-        """
+        """Находит следующий по величине узел (successor)."""
         if node.right:
             return self.get_min(node.right)
 
@@ -100,12 +86,7 @@ class BaseTree:
         return parent
 
     def get_prev(self, node: Node) -> Optional[Node]:
-        """
-        Находит предыдущий по величине узел (Predecessor).
-        Правило:
-        1. Если есть левое поддерево - это максимум в левом поддереве.
-        2. Иначе - идем вверх, пока не станем правым потомком своего родителя.
-        """
+        """Находит предыдущий по величине узел (predecessor)."""
         if node.left:
             return self.get_max(node.left)
 
@@ -121,9 +102,6 @@ class BaseTree:
             self.emit(EventType.NOT_FOUND, node)
 
         return parent
-
-    # --- Обходы дерева (Traversals) ---
-    # Реализованы как генераторы для гибкости, параллельно генерируют события для GUI
 
     def pre_order(self, node: Optional[Node]) -> Generator[Node, None, None]:
         """Прямой обход (NLR - Node, Left, Right)."""

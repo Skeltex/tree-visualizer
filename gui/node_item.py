@@ -1,9 +1,13 @@
+"""Графическое отображение узла в QGraphicsScene."""
+
 from PySide6.QtWidgets import QGraphicsObject, QGraphicsItem
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 
 
 class NodeItem(QGraphicsObject):
+    """Классы визуального узла для отрисовки, подсветки и анимации."""
+
     def __init__(self, node_id: str, key: int, radius: int = 20):
         super().__init__()
         self.node_id = node_id
@@ -11,7 +15,6 @@ class NodeItem(QGraphicsObject):
         self.radius = radius
         self.border_width = 2
 
-        # РАЗДЕЛЯЕМ ЦВЕТА: Базовый (навсегда) и Текущий (для анимации)
         self.base_bg = QColor("white")
         self.base_border = QColor("black")
         self.base_text = QColor("black")
@@ -21,17 +24,16 @@ class NodeItem(QGraphicsObject):
         self.current_text = self.base_text
 
         self.edges = []
-
-        # КРИТИЧЕСКИ ВАЖНО: Разрешаем отслеживать изменение координат (Используем QGraphicsItem)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
 
     def boundingRect(self) -> QRectF:
+        """Возвращает прямоугольник, ограничивающий узел для отрисовки."""
         return QRectF(-self.radius, -self.radius, self.radius * 2, self.radius * 2)
 
     def paint(self, painter: QPainter, option, widget=None):
+        """Отрисовывает узел в виде окружности с текстом ключа."""
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Рисуем круг всегда текущим цветом
         pen = QPen(self.current_border, self.border_width)
         painter.setPen(pen)
         painter.setBrush(QBrush(self.current_bg))
@@ -47,6 +49,7 @@ class NodeItem(QGraphicsObject):
     def set_base_color(
         self, bg_color: str, border_color: str = "black", text_color: str = "black"
     ):
+        """Устанавливает базовый цвет узла, который будет восстановлен после подсветки."""
         self.base_bg = QColor(bg_color)
         self.base_border = QColor(border_color)
         self.base_text = QColor(text_color)
@@ -58,26 +61,30 @@ class NodeItem(QGraphicsObject):
     def set_highlight(
         self, bg_color: str, border_color: str, text_color: str = "black"
     ):
+        """Временно меняет цвета узла для визуального выделения."""
         self.current_bg = QColor(bg_color)
         self.current_border = QColor(border_color)
         self.current_text = QColor(text_color)
         self.update()
 
     def remove_highlight(self):
+        """Восстанавливает базовый цвет узла, отменяя выделение."""
         self.current_bg = self.base_bg
         self.current_border = self.base_border
         self.current_text = self.base_text
         self.update()
 
     def add_edge(self, edge):
+        """Добавляет ребро в список связей узла."""
         self.edges.append(edge)
 
     def remove_edge(self, edge):
+        """Удаляет ребро из списка связей узла."""
         if edge in self.edges:
             self.edges.remove(edge)
 
     def itemChange(self, change, value):
-        # Если координаты изменились - дергаем все привязанные линии!
+        """Обновляет позиции связанных ребер при изменении позиции узла."""
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             for edge in self.edges:
                 edge.update_position()

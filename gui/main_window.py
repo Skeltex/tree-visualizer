@@ -1,3 +1,5 @@
+"""Графический интерфейс главного окна."""
+
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -12,7 +14,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPainter
 
-# Импортируем наши слои
 from core.bst import BST
 from core.avl_tree import AVLTree
 from core.rb_tree import RBTree
@@ -22,28 +23,25 @@ from controller.animator import Animator
 
 
 class MainWindow(QMainWindow):
+    """Главное окно приложения визуализации деревьев."""
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Интерактивный Визуализатор Деревьев Поиска")
         self.resize(1200, 800)
 
-        # Текущие активные компоненты
         self.tree = None
         self.animator = None
 
         self.init_ui()
-        self.change_tree_type()  # Инициализируем стартовое дерево
+        self.change_tree_type()
 
     def init_ui(self):
-        # Главный виджет и слой
+        """Инициализирует элементы пользовательского интерфейса и их расположение."""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-
-        # --- Верхняя панель управления ---
         control_panel = QHBoxLayout()
-
-        # 1. Выбор типа дерева
         self.tree_selector = QComboBox()
         self.tree_selector.addItems(
             [
@@ -57,15 +55,12 @@ class MainWindow(QMainWindow):
         control_panel.addWidget(QLabel("Тип дерева:"))
         control_panel.addWidget(self.tree_selector)
 
-        # 2. Поле ввода числа
         self.val_input = QSpinBox()
         self.val_input.setRange(-999, 999)
         self.val_input.setValue(10)
         self.val_input.setMinimumWidth(80)
         control_panel.addWidget(QLabel("Значение:"))
         control_panel.addWidget(self.val_input)
-
-        # 3. Базовые операции
         self.btn_insert = QPushButton("Вставить")
         self.btn_insert.clicked.connect(self.on_insert)
 
@@ -79,7 +74,6 @@ class MainWindow(QMainWindow):
         control_panel.addWidget(self.btn_delete)
         control_panel.addWidget(self.btn_search)
 
-        # 4. Обходы
         self.btn_pre = QPushButton("Прямой обход")
         self.btn_pre.clicked.connect(lambda: self.on_traverse("pre"))
 
@@ -93,7 +87,6 @@ class MainWindow(QMainWindow):
         control_panel.addWidget(self.btn_in)
         control_panel.addWidget(self.btn_post)
 
-        # Собираем все кнопки в список для удобной блокировки
         self.control_buttons = [
             self.btn_insert,
             self.btn_delete,
@@ -106,11 +99,9 @@ class MainWindow(QMainWindow):
 
         main_layout.addLayout(control_panel)
 
-        # --- Холст (View и Scene) ---
         self.scene = TreeScene()
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Включаем возможность перетаскивать холст мышкой
         self.view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         main_layout.addWidget(self.view)
 
@@ -128,7 +119,6 @@ class MainWindow(QMainWindow):
         elif idx == 3:
             self.tree = SplayTree()
 
-        # Создаем новый аниматор для нового дерева
         self.animator = Animator(self.scene, self.tree, speed_ms=400)
         self.animator.sequence_finished.connect(self.unlock_ui)
 
@@ -142,15 +132,15 @@ class MainWindow(QMainWindow):
         for btn in self.control_buttons:
             btn.setEnabled(True)
 
-    # --- Обработчики команд ---
-
     def on_insert(self):
+        """Обрабатывает нажатие кнопки 'Вставить'."""
         val = self.val_input.value()
         self.lock_ui()
         self.tree.insert(val)
         self.animator.play()
 
     def on_delete(self):
+        """Обрабатывает нажатие кнопки 'Удалить'."""
         val = self.val_input.value()
         self.lock_ui()
         success = self.tree.delete(val)
@@ -159,19 +149,19 @@ class MainWindow(QMainWindow):
         self.animator.play()
 
     def on_search(self):
+        """Обрабатывает нажатие кнопки 'Найти'."""
         val = self.val_input.value()
         self.lock_ui()
         self.tree.search(val)
         self.animator.play()
 
     def on_traverse(self, mode: str):
+        """Обрабатывает обход дерева в указанном порядке (pre, in, post)."""
         if not self.tree.root:
             QMessageBox.information(self, "Ошибка", "Дерево пустое!")
             return
 
         self.lock_ui()
-        # Вызываем генератор обхода. Использование list() заставляет генератор
-        # отработать до конца и отправить все события в Animator.
         if mode == "pre":
             list(self.tree.pre_order(self.tree.root))
         elif mode == "in":
