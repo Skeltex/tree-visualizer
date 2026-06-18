@@ -70,9 +70,13 @@ class MainWindow(QMainWindow):
         self.btn_search = QPushButton("Найти")
         self.btn_search.clicked.connect(self.on_search)
 
+        self.btn_clear = QPushButton("Очистить")
+        self.btn_clear.clicked.connect(self.on_clear)
+
         control_panel.addWidget(self.btn_insert)
         control_panel.addWidget(self.btn_delete)
         control_panel.addWidget(self.btn_search)
+        control_panel.addWidget(self.btn_clear)
 
         self.btn_pre = QPushButton("Прямой обход")
         self.btn_pre.clicked.connect(lambda: self.on_traverse("pre"))
@@ -91,6 +95,7 @@ class MainWindow(QMainWindow):
             self.btn_insert,
             self.btn_delete,
             self.btn_search,
+            self.btn_clear,
             self.btn_pre,
             self.btn_in,
             self.btn_post,
@@ -179,3 +184,7 @@ class MainWindow(QMainWindow):
 
         self.val_input.setValue(key)
         self.on_delete()
+
+    def on_clear(self):
+        """Очищает дерево и сцену, создавая новую пустую структуру текущего типа."""
+        self.change_tree_type()
