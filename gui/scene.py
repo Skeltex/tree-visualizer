@@ -1,14 +1,16 @@
 """Сцена для визуализации элементов узлов дерева и их связей."""
 
 from PySide6.QtWidgets import QGraphicsScene
-from PySide6.QtCore import QTimer
 from PySide6.QtGui import QBrush, QColor
+from PySide6.QtCore import Signal
 from gui.node_item import NodeItem
 from gui.edge_item import EdgeItem
 
 
 class TreeScene(QGraphicsScene):
     """Управляет узлами, ребрами и их визуальным состоянием."""
+
+    node_delete_requested = Signal(int)
 
     def __init__(self):
         """Инициализирует сцену с параметрами размера и цвета фона."""
@@ -22,6 +24,9 @@ class TreeScene(QGraphicsScene):
         node_id = node_info["id"]
         key = node_info["key"]
         item = NodeItem(node_id, key)
+
+        item.right_clicked.connect(self.node_delete_requested.emit)
+
         self.addItem(item)
         self.nodes[node_id] = item
 
@@ -76,7 +81,6 @@ class TreeScene(QGraphicsScene):
             item.set_highlight("lightgreen", "darkgreen", duration_ms=1500)
         elif color == "RED":
             item.set_highlight("lightcoral", "darkred", duration_ms=1500)
-
 
     def _add_edge_if_not_exists(self, parent_id: str, child_id: str):
         """Создает ребро между двумя узлами, если оно еще не существует."""

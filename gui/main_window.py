@@ -100,6 +100,7 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(control_panel)
 
         self.scene = TreeScene()
+        self.scene.node_delete_requested.connect(self.handle_right_click_delete)
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
@@ -170,3 +171,11 @@ class MainWindow(QMainWindow):
             list(self.tree.post_order(self.tree.root))
 
         self.animator.play()
+
+    def handle_right_click_delete(self, key: int):
+        """Обрабатывает запрос на удаление узла по правому клику мыши на сцене."""
+        if not self.btn_delete.isEnabled():
+            return
+
+        self.val_input.setValue(key)
+        self.on_delete()

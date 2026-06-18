@@ -1,12 +1,14 @@
 """Графическое отображение узла в QGraphicsScene."""
 
 from PySide6.QtWidgets import QGraphicsObject, QGraphicsItem
-from PySide6.QtCore import QRectF, Qt, QTimer
+from PySide6.QtCore import QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont
 
 
 class NodeItem(QGraphicsObject):
     """Классы визуального узла для отрисовки, подсветки и анимации."""
+
+    right_clicked = Signal(int)
 
     def __init__(self, node_id: str, key: int, radius: int = 20):
         super().__init__()
@@ -29,6 +31,14 @@ class NodeItem(QGraphicsObject):
         self._highlight_timer = QTimer()
         self._highlight_timer.setSingleShot(True)
         self._highlight_timer.timeout.connect(self.remove_highlight)
+
+    def mousePressEvent(self, event):
+        """Обрабатывает нажатия мыши, инициируя удаление при правом клике."""
+        if event.button() == Qt.MouseButton.RightButton:
+            self.right_clicked.emit(self.key)
+            event.accept()
+        else:
+            super().mousePressEvent(event)
 
     def boundingRect(self) -> QRectF:
         """Возвращает прямоугольник, ограничивающий узел для отрисовки."""
