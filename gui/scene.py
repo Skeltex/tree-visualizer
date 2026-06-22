@@ -69,18 +69,21 @@ class TreeScene(QGraphicsScene):
         else:
             item.set_base_color(color_str)
 
-    def highlight_node(self, node_id: str, color: str):
+    def highlight_node(self, node_id: str, color: str, duration_ms: int = 0):
         """Подсвечивает узел временным цветом."""
         item = self.get_node_item(node_id)
         if not item:
             return
 
+        if duration_ms <= 0:
+            duration_ms = 400 if color == "YELLOW" else 1500
+
         if color == "YELLOW":
-            item.set_highlight("yellow", "orange", duration_ms=400)
+            item.set_highlight("yellow", "orange", duration_ms=duration_ms)
         elif color == "GREEN":
-            item.set_highlight("lightgreen", "darkgreen", duration_ms=1500)
+            item.set_highlight("lightgreen", "darkgreen", duration_ms=duration_ms)
         elif color == "RED":
-            item.set_highlight("lightcoral", "darkred", duration_ms=1500)
+            item.set_highlight("lightcoral", "darkred", duration_ms=duration_ms)
 
     def _add_edge_if_not_exists(self, parent_id: str, child_id: str):
         """Создает ребро между двумя узлами, если оно еще не существует."""

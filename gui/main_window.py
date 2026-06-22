@@ -11,7 +11,9 @@ from PySide6.QtWidgets import (
     QGraphicsView,
     QLabel,
     QMessageBox,
+    QSlider,
 )
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter
 
 from core.bst import BST
@@ -116,6 +118,19 @@ class MainWindow(QMainWindow):
         control_panel.addWidget(self.btn_in)
         control_panel.addWidget(self.btn_post)
 
+        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
+        self.speed_slider.setRange(100, 1500)
+        self.speed_slider.setValue(400)
+
+        self.speed_slider.setInvertedAppearance(True)
+        self.speed_slider.setMinimumWidth(100)
+
+        self.speed_label = QLabel("Скорость:")
+        self.speed_slider.valueChanged.connect(self.on_speed_changed)
+
+        control_panel.addWidget(self.speed_label)
+        control_panel.addWidget(self.speed_slider)
+
         self.control_buttons = [
             self.btn_insert,
             self.btn_delete,
@@ -148,7 +163,11 @@ class MainWindow(QMainWindow):
         elif idx == 3:
             self.tree = SplayTree()
 
-        self.animator = Animator(self.scene, self.tree, speed_ms=400)
+        current_speed = (
+            self.speed_slider.value() if hasattr(self, "speed_slider") else 400
+        )
+
+        self.animator = Animator(self.scene, self.tree, speed_ms=current_speed)
         self.animator.sequence_finished.connect(self.unlock_ui)
 
     def lock_ui(self):
@@ -211,3 +230,8 @@ class MainWindow(QMainWindow):
     def on_clear(self):
         """Очищает дерево и сцену, создавая новую пустую структуру текущего типа."""
         self.change_tree_type()
+
+    def on_speed_changed(self, value: int):
+        """Обновляет скорость анимации в реальном времени."""
+        if self.animator:
+            self.animator.speed_ms = value

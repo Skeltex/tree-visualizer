@@ -107,11 +107,18 @@ class Animator(QObject):
             color = frame["kwargs"].get("color", "BLACK")
             self.scene.set_node_color(node_info["id"], color)
         elif event_type == EventType.TRAVERSE:
-            self.scene.highlight_node(node_info["id"], "YELLOW")
+            trav_duration = int(self.speed_ms * 0.9)
+            self.scene.highlight_node(
+                node_info["id"], "YELLOW", duration_ms=trav_duration
+            )
         elif event_type == EventType.FOUND:
-            self.scene.highlight_node(node_info["id"], "GREEN")
+            found_duration = max(800, int(self.speed_ms * 2.5))
+            self.scene.highlight_node(
+                node_info["id"], "GREEN", duration_ms=found_duration
+            )
         elif event_type == EventType.NOT_FOUND and node_info:
-            self.scene.highlight_node(node_info["id"], "RED")
+            fail_duration = max(800, int(self.speed_ms * 2.5))
+            self.scene.highlight_node(node_info["id"], "RED", duration_ms=fail_duration)
 
         self.anim_group = QParallelAnimationGroup()
         animations_added = False
