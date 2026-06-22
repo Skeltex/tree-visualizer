@@ -1,6 +1,7 @@
 """Графический интерфейс главного окна."""
 
 import json
+import random
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -14,6 +15,10 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QSlider,
     QFileDialog,
+    QDialog,
+    QFormLayout,
+    QDialogButtonBox,
+    QSizePolicy,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter
@@ -24,6 +29,44 @@ from core.rb_tree import RBTree
 from core.splay_tree import SplayTree
 from gui.scene import TreeScene
 from controller.animator import Animator
+
+
+class GenerateDialog(QDialog):
+    """Диалоговое окно для настройки параметров случайной генерации дерева."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Генерация дерева")
+        self.setModal(True)
+        self.setMinimumWidth(300)
+
+        layout = QFormLayout(self)
+
+        self.count_spin = QSpinBox()
+        self.count_spin.setRange(1, 100)
+        self.count_spin.setValue(15)
+        layout.addRow("Количество вершин:", self.count_spin)
+
+        self.order_combo = QComboBox()
+        self.order_combo.addItems(
+            [
+                "Случайный порядок",
+                "По возрастанию (Худший случай)",
+                "По убыванию (Худший случай)",
+            ]
+        )
+        layout.addRow("Порядок вставки:", self.order_combo)
+
+        self.button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
+
+    def get_values(self):
+        """Возвращает выбранное количество и индекс порядка."""
+        return self.count_spin.value(), self.order_combo.currentIndex()
 
 
 class TreeGraphicsView(QGraphicsView):
@@ -74,6 +117,9 @@ class MainWindow(QMainWindow):
         top_panel = QHBoxLayout()
         bottom_panel = QHBoxLayout()
 
+        type_layout = QHBoxLayout()
+        type_layout.setSpacing(5)
+
         self.tree_selector = QComboBox()
         self.tree_selector.addItems(
             [
@@ -84,15 +130,25 @@ class MainWindow(QMainWindow):
             ]
         )
         self.tree_selector.currentIndexChanged.connect(self.change_tree_type)
-        top_panel.addWidget(QLabel("Тип дерева:"))
-        top_panel.addWidget(self.tree_selector)
+
+        self.tree_selector.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+
+        type_layout.addWidget(QLabel("Тип дерева:"))
+        type_layout.addWidget(self.tree_selector)
+
+        val_layout = QHBoxLayout()
+        val_layout.setSpacing(5)
 
         self.val_input = QSpinBox()
         self.val_input.setRange(-999, 999)
         self.val_input.setValue(10)
-        self.val_input.setMinimumWidth(80)
-        top_panel.addWidget(QLabel("Значение:"))
-        top_panel.addWidget(self.val_input)
+        self.val_input.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        val_layout.addWidget(QLabel("Значение:"))
+        val_layout.addWidget(self.val_input)
 
         self.btn_insert = QPushButton("Вставить")
         self.btn_insert.clicked.connect(self.on_insert)
@@ -103,15 +159,20 @@ class MainWindow(QMainWindow):
         self.btn_clear = QPushButton("Очистить")
         self.btn_clear.clicked.connect(self.on_clear)
 
-        top_panel.addWidget(self.btn_insert)
-        top_panel.addWidget(self.btn_delete)
-        top_panel.addWidget(self.btn_search)
-        top_panel.addWidget(self.btn_clear)
+        top_panel.addLayout(type_layout, 4)
+        top_panel.addLayout(val_layout, 2)
+        top_panel.addWidget(self.btn_insert, 2)
+        top_panel.addWidget(self.btn_delete, 2)
+        top_panel.addWidget(self.btn_search, 2)
+        top_panel.addWidget(self.btn_clear, 2)
 
         self.btn_save = QPushButton("Сохранить")
         self.btn_save.clicked.connect(self.on_save)
         self.btn_load = QPushButton("Загрузить")
         self.btn_load.clicked.connect(self.on_load)
+
+        self.btn_generate = QPushButton("Сгенерировать")
+        self.btn_generate.clicked.connect(self.on_generate)
 
         self.btn_pre = QPushButton("Прямой обход")
         self.btn_pre.clicked.connect(lambda: self.on_traverse("pre"))
@@ -128,13 +189,20 @@ class MainWindow(QMainWindow):
         self.speed_label = QLabel("Скорость:")
         self.speed_slider.valueChanged.connect(self.on_speed_changed)
 
-        bottom_panel.addWidget(self.btn_save)
-        bottom_panel.addWidget(self.btn_load)
-        bottom_panel.addWidget(self.btn_pre)
-        bottom_panel.addWidget(self.btn_in)
-        bottom_panel.addWidget(self.btn_post)
-        bottom_panel.addWidget(self.speed_label)
-        bottom_panel.addWidget(self.speed_slider)
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addWidget(self.btn_save)
+        buttons_layout.addWidget(self.btn_load)
+        buttons_layout.addWidget(self.btn_generate)
+        buttons_layout.addWidget(self.btn_pre)
+        buttons_layout.addWidget(self.btn_in)
+        buttons_layout.addWidget(self.btn_post)
+
+        speed_layout = QHBoxLayout()
+        speed_layout.addWidget(self.speed_label)
+        speed_layout.addWidget(self.speed_slider)
+
+        bottom_panel.addLayout(buttons_layout, 2)
+        bottom_panel.addLayout(speed_layout, 1)
 
         main_layout.addLayout(top_panel)
         main_layout.addLayout(bottom_panel)
@@ -146,6 +214,7 @@ class MainWindow(QMainWindow):
             self.btn_clear,
             self.btn_save,
             self.btn_load,
+            self.btn_generate,
             self.btn_pre,
             self.btn_in,
             self.btn_post,
@@ -304,3 +373,28 @@ class MainWindow(QMainWindow):
         """Обновляет скорость анимации в реальном времени."""
         if self.animator:
             self.animator.speed_ms = value
+
+    def on_generate(self):
+        """Открывает диалог генерации и строит случайное дерево."""
+        dialog = GenerateDialog(self)
+        if dialog.exec():
+            count, order_idx = dialog.get_values()
+
+            pool = list(range(-999, 1000))
+            if count > len(pool):
+                count = len(pool)
+
+            keys = random.sample(pool, count)
+
+            if order_idx == 1:
+                keys.sort()
+            elif order_idx == 2:
+                keys.sort(reverse=True)
+
+            self.on_clear()
+            self.lock_ui()
+
+            for key in keys:
+                self.tree.insert(key)
+
+            self.animator.play()
