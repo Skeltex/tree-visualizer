@@ -22,6 +22,29 @@ from gui.scene import TreeScene
 from controller.animator import Animator
 
 
+class TreeGraphicsView(QGraphicsView):
+    """Кастомный виджет для отображения сцены с поддержкой масштабирования."""
+
+    def __init__(self, scene):
+        super().__init__(scene)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        # Масштабирование будет происходить относительно курсора мыши
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+
+    def wheelEvent(self, event):
+        """Обрабатывает прокрутку колесика мыши для зума."""
+        zoom_in_factor = 1.15
+        zoom_out_factor = 1 / zoom_in_factor
+
+        if event.angleDelta().y() > 0:
+            zoom_factor = zoom_in_factor
+        else:
+            zoom_factor = zoom_out_factor
+
+        self.scale(zoom_factor, zoom_factor)
+
+
 class MainWindow(QMainWindow):
     """Главное окно приложения визуализации деревьев."""
 
@@ -108,9 +131,7 @@ class MainWindow(QMainWindow):
 
         self.scene = TreeScene()
         self.scene.node_delete_requested.connect(self.handle_right_click_delete)
-        self.view = QGraphicsView(self.scene)
-        self.view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        self.view = TreeGraphicsView(self.scene)
         main_layout.addWidget(self.view)
 
     def change_tree_type(self):

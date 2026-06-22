@@ -16,7 +16,7 @@ class TreeScene(QGraphicsScene):
         """Инициализирует сцену с параметрами размера и цвета фона."""
         super().__init__()
         self.nodes: dict[str, NodeItem] = {}
-        self.setSceneRect(-1000, -1000, 2000, 2000)
+        self.setSceneRect(-50000, -50000, 100000, 100000)
         self.setBackgroundBrush(QBrush(QColor("#1e1e2e")))
 
     def add_node_item(self, node_info: dict) -> NodeItem:
