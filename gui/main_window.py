@@ -1,5 +1,6 @@
 """Графический интерфейс главного окна."""
 
+import json
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QSlider,
+    QFileDialog,
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter
@@ -68,7 +70,10 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        control_panel = QHBoxLayout()
+
+        top_panel = QHBoxLayout()
+        bottom_panel = QHBoxLayout()
+
         self.tree_selector = QComboBox()
         self.tree_selector.addItems(
             [
@@ -79,70 +84,73 @@ class MainWindow(QMainWindow):
             ]
         )
         self.tree_selector.currentIndexChanged.connect(self.change_tree_type)
-        control_panel.addWidget(QLabel("Тип дерева:"))
-        control_panel.addWidget(self.tree_selector)
+        top_panel.addWidget(QLabel("Тип дерева:"))
+        top_panel.addWidget(self.tree_selector)
 
         self.val_input = QSpinBox()
         self.val_input.setRange(-999, 999)
         self.val_input.setValue(10)
         self.val_input.setMinimumWidth(80)
-        control_panel.addWidget(QLabel("Значение:"))
-        control_panel.addWidget(self.val_input)
+        top_panel.addWidget(QLabel("Значение:"))
+        top_panel.addWidget(self.val_input)
+
         self.btn_insert = QPushButton("Вставить")
         self.btn_insert.clicked.connect(self.on_insert)
-
         self.btn_delete = QPushButton("Удалить")
         self.btn_delete.clicked.connect(self.on_delete)
-
         self.btn_search = QPushButton("Найти")
         self.btn_search.clicked.connect(self.on_search)
-
         self.btn_clear = QPushButton("Очистить")
         self.btn_clear.clicked.connect(self.on_clear)
 
-        control_panel.addWidget(self.btn_insert)
-        control_panel.addWidget(self.btn_delete)
-        control_panel.addWidget(self.btn_search)
-        control_panel.addWidget(self.btn_clear)
+        top_panel.addWidget(self.btn_insert)
+        top_panel.addWidget(self.btn_delete)
+        top_panel.addWidget(self.btn_search)
+        top_panel.addWidget(self.btn_clear)
+
+        self.btn_save = QPushButton("Сохранить")
+        self.btn_save.clicked.connect(self.on_save)
+        self.btn_load = QPushButton("Загрузить")
+        self.btn_load.clicked.connect(self.on_load)
 
         self.btn_pre = QPushButton("Прямой обход")
         self.btn_pre.clicked.connect(lambda: self.on_traverse("pre"))
-
         self.btn_in = QPushButton("Симметричный")
         self.btn_in.clicked.connect(lambda: self.on_traverse("in"))
-
         self.btn_post = QPushButton("Обратный")
         self.btn_post.clicked.connect(lambda: self.on_traverse("post"))
-
-        control_panel.addWidget(self.btn_pre)
-        control_panel.addWidget(self.btn_in)
-        control_panel.addWidget(self.btn_post)
 
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
         self.speed_slider.setRange(100, 1500)
         self.speed_slider.setValue(400)
-
         self.speed_slider.setInvertedAppearance(True)
         self.speed_slider.setMinimumWidth(100)
-
         self.speed_label = QLabel("Скорость:")
         self.speed_slider.valueChanged.connect(self.on_speed_changed)
 
-        control_panel.addWidget(self.speed_label)
-        control_panel.addWidget(self.speed_slider)
+        bottom_panel.addWidget(self.btn_save)
+        bottom_panel.addWidget(self.btn_load)
+        bottom_panel.addWidget(self.btn_pre)
+        bottom_panel.addWidget(self.btn_in)
+        bottom_panel.addWidget(self.btn_post)
+        bottom_panel.addWidget(self.speed_label)
+        bottom_panel.addWidget(self.speed_slider)
+
+        main_layout.addLayout(top_panel)
+        main_layout.addLayout(bottom_panel)
 
         self.control_buttons = [
             self.btn_insert,
             self.btn_delete,
             self.btn_search,
             self.btn_clear,
+            self.btn_save,
+            self.btn_load,
             self.btn_pre,
             self.btn_in,
             self.btn_post,
             self.tree_selector,
         ]
-
-        main_layout.addLayout(control_panel)
 
         self.scene = TreeScene()
         self.scene.node_delete_requested.connect(self.handle_right_click_delete)
@@ -218,6 +226,67 @@ class MainWindow(QMainWindow):
             list(self.tree.post_order(self.tree.root))
 
         self.animator.play()
+
+    def on_save(self):
+        """Сохраняет ключи дерева в JSON файл (тихий прямой обход)."""
+        if not self.tree.root:
+            QMessageBox.information(self, "Ошибка", "Дерево пустое, нечего сохранять!")
+            return
+
+        def get_keys_silent(node):
+            if not node:
+                return []
+            return [node.key] + get_keys_silent(node.left) + get_keys_silent(node.right)
+
+        keys = get_keys_silent(self.tree.root)
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Сохранить дерево", "", "JSON Files (*.json)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump({"keys": keys}, f, indent=4)
+                QMessageBox.information(
+                    self, "Успех", f"Дерево сохранено ({len(keys)} узлов)."
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "Ошибка", f"Не удалось сохранить файл:\n{str(e)}"
+                )
+
+    def on_load(self):
+        """Загружает ключи из JSON файла и красиво анимирует построение дерева."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Загрузить дерево", "", "JSON Files (*.json)"
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                keys = data.get("keys", [])
+                if not keys:
+                    QMessageBox.warning(
+                        self, "Ошибка", "Файл пуст или имеет неверный формат."
+                    )
+                    return
+
+                self.on_clear()
+                self.lock_ui()
+
+                for key in keys:
+                    self.tree.insert(key)
+
+                self.animator.play()
+
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "Ошибка", f"Не удалось загрузить файл:\n{str(e)}"
+                )
+                self.unlock_ui()
 
     def handle_right_click_delete(self, key: int):
         """Обрабатывает запрос на удаление узла по правому клику мыши на сцене."""
